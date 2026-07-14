@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Harry's Longest Mile — Wrapped</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Longest Mile brand tokens (from longest-mile-theme skill) */
+    --bg-primary:#001712; --bg-section:#001f19; --bg-card:#002a21;
+    --accent:#5fe6c4; --accent-light:#8ff2d8;
+    --cta:#ff9e2c; --cta-light:#ffb55c;
+    --ink:#ffffff; --sec:rgba(255,255,255,.72); --muted:rgba(255,255,255,.45);
+    --a:var(--accent);            /* per-card accent (text) */
+    --glowcol:#0e5f50;            /* ambient glow, derived teal — never white */
+    --maxw:440px;
+    --disp:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:#000;color:var(--ink);font-family:var(--disp);
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    overflow:hidden;touch-action:none;display:flex;align-items:center;justify-content:center;}
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+
+  #app{position:relative;width:100vw;height:100dvh;max-width:var(--maxw);
+    overflow:hidden;background:var(--bg-primary);isolation:isolate;container-type:inline-size;}
+  @media(min-width:520px){
+    #app{height:min(100dvh,900px);border-radius:30px;
+      box-shadow:0 40px 120px rgba(0,0,0,.6),0 0 0 1px rgba(95,230,196,.08);}
+  }
+  #app::after{content:"";position:absolute;inset:0;z-index:40;pointer-events:none;opacity:.045;
+    mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+
+  #bars{position:absolute;top:calc(env(safe-area-inset-top) + 12px);left:0;right:0;
+    padding:0 16px;display:flex;gap:5px;z-index:30}
+  .bar{flex:1;height:2.5px;border-radius:3px;background:rgba(255,255,255,.18);overflow:hidden}
+  .bar>span{display:block;height:100%;width:0;background:var(--ink)}
+  .bar.done>span{width:100%}
+  .bar.active>span{width:0;animation:fillbar 5.5s linear forwards}
+  @keyframes fillbar{to{width:100%}}
+
+  .card{position:absolute;inset:0;z-index:10;display:none;flex-direction:column;
+    align-items:flex-start;justify-content:center;padding:78px 28px 92px;}
+  .card.show{display:flex}
+
+  .glow{position:absolute;inset:0;z-index:-2;background:
+    radial-gradient(135% 95% at 50% 116%, color-mix(in srgb,var(--glowcol) 60%,transparent) 0%, transparent 56%),
+    radial-gradient(120% 75% at 50% -14%, color-mix(in srgb,var(--glowcol) 22%,transparent) 0%, transparent 48%),
+    linear-gradient(180deg,#01221b 0%, #00110d 100%);}
+  .ghost{position:absolute;z-index:-1;pointer-events:none;color:var(--a);opacity:.06;
+    font-weight:900;letter-spacing:-.05em;line-height:.8;top:9%;right:-4%;
+    font-size:min(52vw,240px);white-space:nowrap}
+  .ghost svg{display:block;width:min(72vw,330px);height:auto}
+  .card.show .ghost{animation:ghostin 1s cubic-bezier(.2,.7,.2,1) both}
+  @keyframes ghostin{from{opacity:0;transform:translateY(14px)}to{opacity:.06;transform:none}}
+
+  /* bib design language ---------------------------------------------------- */
+  /* dot-grid halftone, dense up top and fading down (straight off the bib) */
+  .dots{position:absolute;inset:0;z-index:-1;pointer-events:none;
+    background-image:radial-gradient(circle, color-mix(in srgb,var(--a) 60%,transparent) 1px, transparent 1.6px);
+    background-size:21px 21px;opacity:.9;
+    -webkit-mask-image:linear-gradient(180deg,rgba(0,0,0,.9) 0%, rgba(0,0,0,.35) 30%, transparent 58%);
+            mask-image:linear-gradient(180deg,rgba(0,0,0,.9) 0%, rgba(0,0,0,.35) 30%, transparent 58%)}
+  /* diagonal slashes in the corners (bib motif) */
+  .slash{position:absolute;z-index:-1;pointer-events:none;width:180px;height:120px;color:rgba(95,230,196,.13)}
+  .slash svg{width:100%;height:100%}
+  .slash.tr{top:60px;right:-30px;transform:rotate(180deg)}
+  .slash.bl{bottom:56px;left:-34px}
+  .lockup{display:block;width:min(58cqw,220px);height:auto;margin-bottom:22px}
+  .swoosh{display:block;width:min(64cqw,230px);height:14px;margin-top:12px;color:#fff}
+  .swoosh svg{width:100%;height:100%}
+  .punch{color:var(--cta)}
+
+  .kicker{color:var(--a);font-weight:700;font-size:12px;letter-spacing:.22em;
+    text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:9px}
+  .kicker::before{content:"";width:22px;height:2px;background:var(--a);display:inline-block}
+  .hero{font-weight:900;font-size:clamp(40px,15cqw,66px);line-height:.9;letter-spacing:-.035em;
+    max-width:100%;overflow-wrap:break-word}
+  .hero.sm{font-size:clamp(32px,12cqw,54px)}
+  .hero.mid{font-size:clamp(38px,13cqw,58px)}
+  .hero .u{font-size:.3em;font-weight:800;letter-spacing:0;color:var(--muted);margin-left:.12em}
+  .heronote{font-weight:600;font-size:13px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--muted);margin-top:14px}
+  .sub{margin-top:20px;font-size:clamp(17px,4.6vw,21px);line-height:1.4;color:var(--sec);
+    max-width:23ch;font-weight:400}
+  .sub b{color:var(--a);font-weight:700}
+
+  .card.show .rise{animation:rise .6s cubic-bezier(.2,.75,.2,1) both}
+  .card.show .rise.d1{animation-delay:.12s}
+  .card.show .rise.d2{animation-delay:.24s}
+  .card.show .rise.d3{animation-delay:.38s}
+  @keyframes rise{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
+
+  .cmp{width:100%;max-width:340px;margin-top:22px;display:flex;flex-direction:column;gap:12px}
+  .cmprow{display:flex;flex-direction:column;gap:6px}
+  .cmprow .lab{display:flex;justify-content:space-between;font-size:12px;font-weight:600;
+    letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .cmprow .lab b{color:var(--ink);font-weight:700}
+  .track{height:16px;border-radius:9px;background:rgba(255,255,255,.08);overflow:hidden}
+  .fill{height:100%;border-radius:9px;width:0;transition:width 1s cubic-bezier(.2,.8,.2,1)}
+  .fill.you{background:linear-gradient(90deg,var(--accent),var(--accent-light))}
+  .fill.them{background:rgba(255,255,255,.22)}
+  .card.show .fill{width:var(--w)}
+
+  .field{display:flex;flex-wrap:wrap;align-content:flex-start;gap:5px;width:100%;max-width:336px;margin-top:22px}
+  .dot{width:9px;height:9px;border-radius:2px;background:rgba(255,255,255,.14);flex:0 0 auto}
+  .dot.beat{background:rgba(255,255,255,.28)}
+  .dot.you{background:var(--accent);border-radius:2px;
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 45%,transparent),0 0 12px var(--accent)}
+
+  .card.persona{justify-content:center}
+  .persona .kicker{color:var(--ink);opacity:.6}
+  .persona .name{font-weight:900;font-size:clamp(32px,12cqw,50px);line-height:.94;color:var(--a);
+    letter-spacing:-.03em;text-transform:uppercase;max-width:100%;
+    overflow-wrap:normal;word-break:keep-all;hyphens:none;text-wrap:balance}
+  .persona .sub{margin-top:24px;max-width:24ch}
+
+  /* SUMMARY poster */
+  .card.summary{justify-content:center;padding:0}
+  .poster{position:relative;margin:auto;width:calc(100% - 28px);max-width:404px;
+    border-radius:22px;padding:24px 22px 20px;
+    background:linear-gradient(165deg,#083f34 0%, #00241c 58%, #00130f 100%);
+    box-shadow:inset 0 0 0 1px rgba(95,230,196,.28), 0 24px 60px rgba(0,0,0,.5);overflow:hidden}
+  .poster::before{content:"";position:absolute;top:-42%;right:-30%;width:82%;height:82%;
+    background:radial-gradient(circle,color-mix(in srgb,var(--a) 42%,transparent),transparent 65%);z-index:0}
+  .poster>*{position:relative;z-index:1}
+  .phead{display:flex;justify-content:space-between;align-items:baseline;
+    border-bottom:1px solid rgba(95,230,196,.22);padding-bottom:11px}
+  .phead b{font-size:15px;font-weight:800;letter-spacing:.01em;text-transform:uppercase}
+  .phead span{color:var(--a);font-size:13px;font-weight:700}
+  .peyebrow{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-top:16px}
+  .pname{font-weight:900;font-size:clamp(26px,8.2cqw,40px);line-height:.98;color:var(--a);
+    text-transform:uppercase;letter-spacing:-.025em;margin-top:4px;
+    overflow-wrap:normal;word-break:keep-all;hyphens:none;text-wrap:balance}
+  .plock{display:block;width:150px;height:auto;margin:14px 0 2px}
+  .pplace{display:inline-flex;align-items:center;gap:8px;margin-top:12px;
+    background:var(--cta);color:#0a0a0a;font-weight:800;font-size:13px;letter-spacing:.02em;
+    padding:7px 14px;border-radius:999px;box-shadow:0 0 26px rgba(255,158,44,.35)}
+  .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:18px}
+  .ptile{position:relative;text-align:left;background:rgba(0,0,0,.26);
+    border:1px solid rgba(95,230,196,.14);border-radius:14px;padding:13px 14px;
+    font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;
+    transition:border-color .15s,background .15s}
+  .ptile:hover,.ptile:active{border-color:rgba(95,230,196,.5);background:rgba(95,230,196,.07)}
+  .ptile .shico{position:absolute;top:11px;right:12px;color:var(--muted);font-size:13px;line-height:1}
+  .ptile:hover .shico{color:var(--a)}
+  .ptile .k{color:var(--muted);font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase}
+  .ptile .v{font-size:26px;font-weight:800;margin-top:6px;line-height:1;color:var(--ink)}
+  .ptile .v small{font-size:13px;color:var(--muted);font-weight:600}
+  .ptile .s{font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.25}
+  .pshare{display:flex;flex-direction:column;align-items:center;gap:9px;margin-top:18px}
+  .sharebtn{display:inline-flex;align-items:center;gap:9px;font:inherit;font-weight:800;font-size:16px;
+    color:#0a0a0a;background:var(--cta);border:none;border-radius:999px;padding:14px 26px;cursor:pointer;
+    box-shadow:0 0 30px rgba(255,158,44,.35);-webkit-tap-highlight-color:transparent}
+  .sharebtn:hover{background:var(--cta-light)}
+  .sharebtn:active{transform:translateY(1px)}
+  .sharebtn svg{width:17px;height:17px}
+  .sharehint{font-size:10.5px;letter-spacing:.09em;color:var(--muted);text-transform:uppercase}
+  .pshare .at{font-weight:800;font-size:17px;color:var(--a);letter-spacing:-.01em;margin-top:1px}
+
+  .hint{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 20px);left:0;right:0;
+    text-align:center;color:var(--muted);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    z-index:20;pointer-events:none}
+  .nav{position:absolute;inset:0;display:flex;z-index:15}
+  .nav .half{flex:1}
+
+  #err{display:none;position:absolute;inset:0;z-index:25;flex-direction:column;justify-content:center;padding:0 26px}
+  #err.show{display:flex}
+  #picker{display:flex;flex-direction:column;gap:7px;width:100%;margin-top:16px;
+    max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #picker a{display:flex;justify-content:space-between;align-items:center;
+    background:rgba(95,230,196,.06);border:1px solid rgba(95,230,196,.18);
+    border-radius:13px;padding:13px 15px;text-decoration:none;color:var(--ink);font-weight:600}
+  #picker a:active{background:rgba(95,230,196,.13)}
+  #picker .nm small{color:var(--muted);font-size:11px}
+  #picker .rt{color:var(--accent);font-weight:800;font-size:14px}
+  #picker .rt small{color:var(--muted);font-weight:500}
+
+  @media(prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+    .fill{width:var(--w)!important}.bar.active>span{width:100%!important}
+  }
+</style>
+</head>
+<body>
+  <div id="app">
+    <div id="bars"></div>
+    <div id="err">
+      <div class="glow"></div>
+      <div class="kicker">Harry's Longest Mile</div>
+      <div class="hero sm">Pick a<br>runner</div>
+      <div class="sub" style="margin-top:14px">Preview mode. Tap a name to open their Wrapped.</div>
+      <div id="picker"></div>
+    </div>
+    <div class="nav"><div class="half" id="prev"></div><div class="half" id="next"></div></div>
+    <div class="hint" id="hint">tap right to continue</div>
+  </div>
+
+<script src="data/results.js?v=2"></script>
+<script src="assets/logo-data.js?v=2"></script>
+<script>
+const KM=1.609344, R1=900, DROP=10, MINCUT=60;  // cutoff = 900 - 10s/round; only a tiny floor so pace stays honest deep in the race
+const $=s=>document.querySelector(s);
+const app=$('#app');
+
+function ordinal(n){const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+function pad(n){return String(n).padStart(2,'0');}
+function mmss(s){return Math.floor(s/60)+':'+pad(Math.round(s%60));}
+function cutoffAt(r){return Math.max(MINCUT,R1-DROP*(r-1));}
+function feetSecs(mi){let s=0;for(let r=1;r<=mi;r++)s+=cutoffAt(r);return s;}
+function hms(s){const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=Math.round(s%60);
+  return h>0?`${h}:${pad(m)}:${pad(ss)}`:`${m}:${pad(ss)}`;}
+function paceKm(cutSec){const s=Math.round(cutSec/KM);return Math.floor(s/60)+':'+pad(s%60);}
+function band(a){
+  if(a<20)return{key:'u20',label:'16-19'};
+  if(a<30)return{key:'20s',label:'20-29'};
+  if(a<40)return{key:'30s',label:'30-39'};
+  if(a<50)return{key:'40s',label:'40-49'};
+  if(a<60)return{key:'50s',label:'50-59'};
+  return{key:'60+',label:'60+'};}
+
+function parseCSV(t){const L=t.trim().split(/\r?\n/),h=L[0].split(',');
+  return L.slice(1).map(l=>{const c=l.split(','),o={};h.forEach((k,i)=>o[k]=c[i]);
+    o.bib=+o.bib;o.age=+o.age;o.miles=+o.miles;o.finish_position=+o.finish_position;o.is_winner=+o.is_winner;return o;});}
+
+function rankIn(all,me,pred){const sub=all.filter(pred);
+  const rank=sub.filter(a=>a.miles>me.miles||(a.miles===me.miles&&a.finish_position<me.finish_position)).length+1;
+  return{rank,size:sub.length};}
+
+function persona(all,me){const p=me.finish_position/all.length;
+  if(me.is_winner)return{n:'Last One Standing',l:'The clock never caught you. There was no one left to beat.'};
+  if(p<=0.05)return{n:'The Machine',l:'You ran until it was nearly impossible. The format ran out of field before it ran out of you.'};
+  if(p<=0.25)return{n:'The Closer',l:'Still walking to the line when most of the field was in a camp chair. You closed the day out.'};
+  if(p<=0.50)return{n:'The Diesel',l:'No top gear, no blow-up. Just the same relentless engine, lap after lap after lap.'};
+  if(p<=0.80)return{n:'The Workhorse',l:'You banked real miles on a clock built to break people. Most never run one.'};
+  return{n:'The Opener',l:'First field to ever run this in Australia, and you were in it. Someone had to draw first blood.'};}
+
+function distSub(mi,km){
+  if(km>=42.2)return"A full marathon, and then some. On a dirt oval, on a dropping clock.";
+  if(km>=30)return"Not far off a marathon. Most people won't run one in their life.";
+  if(km>=21.1)return"Further than a half marathon. You just kept going back out for more.";
+  if(km>=14)return"Longer than the City2Surf. And nobody was there to cheer you up a hill.";
+  if(km>=10)return"Two parkruns, back to back, with a clock trying to end you.";
+  if(km>=5)return"Further than a parkrun. Most people never run one of those.";
+  if(mi>=2)return"Two miles plus on a track built to break people. You kept coming back.";
+  return"A mile on a clock that wanted you gone. Most people never run one.";}
+
+let cur=null,rowsAll=[],cards=[],idx=0,els=[],animated=new Set();
+
+function buildCards(all,me){
+  const N=all.length, km=me.miles*KM, laps=me.miles*2;
+  const outl=N-me.finish_position;
+  const avg=all.reduce((s,a)=>s+a.miles,0)/N;
+  const per=persona(all,me);
+  const b=band(me.age), gLabel=me.gender==='F'?'women':'men';
+  const ageR=rankIn(all,me,a=>band(a.age).key===b.key);
+  const genR=rankIn(all,me,a=>a.gender===me.gender);
+  const genPlace=genR.rank;                          // finishing place within gender
+  const podium=genPlace<=10?{place:genPlace,g:me.gender==='F'?'Female':'Male'}:null;
+  const startP=paceKm(R1), endP=paceKm(cutoffAt(me.miles));
+
+  // ---- standing: best flattering percentile among age band / gender ----
+  const opts=[];
+  if(ageR.size>=5)opts.push({pct:Math.max(1,Math.ceil(ageR.rank/ageR.size*100)),grp:`the ${b.label}s`,short:`the ${b.label}s`});
+  if(genR.size>=5)opts.push({pct:Math.max(1,Math.ceil(genR.rank/genR.size*100)),grp:`all the ${gLabel}`,short:`all ${gLabel}`});
+  opts.sort((x,y)=>x.pct-y.pct);
+  const best=opts[0], second=opts[1];
+  let stand;
+  if(best&&best.pct<=20){
+    // genuine top 20% of a cohort → lead with the percentile
+    let s=`Nobody in that group went much further than you.`;
+    if(second&&second.pct<=30) s=`And top ${second.pct}% of ${second.grp}. Right up the pointy end.`;
+    stand={hero:`Top ${best.pct}%`,heroSm:1,k:'Where you stood',note:`of ${best.grp}`,s,
+      chip:`Top ${best.pct}%`,chipSub:`of ${best.short}`};
+  }else if(outl>=1){
+    // everyone else → the nicer, bigger number: how many they beat
+    const rw=outl===1?'runner':'runners';
+    stand={hero:`${outl}`,heroSm:1,k:'Where you stood',note:`${rw} you beat`,
+      s:`You beat <b>${outl}</b> other ${rw}. That many were done and dusted before you called it a day.`,
+      chip:`${outl}`,chipSub:`${rw} beaten`};
+  }else{
+    stand={hero:`1`,heroSm:1,k:'Where you stood',note:`of ${N} who fronted up`,
+      s:`You were one of <b>${N}</b> who even started. The other 26 million Australians didn't. That's the flex.`,
+      chip:`1 of ${N}`,chipSub:'who started'};
+  }
+  if(me.is_winner){
+    const gW=me.gender==='F'?'Female':'Male';
+    stand={hero:'Winner',heroSm:1,k:'Where you stood',note:`Last ${gW} Standing`,
+      s:`You were the last ${me.gender==='F'?'woman':'man'} standing. Nobody in the field outlasted you. That is the whole event.`,
+      chip:'Winner',chipSub:`Last ${gW} Standing`};
+  }
+  stand.scene='field';stand.field={N,pos:me.finish_position};
+
+  const C=[];
+  C.push({t:'cover'});
+  C.push({scene:'start',ghost:'300',k:'How it started',hero:`300<br>on the<br>line`,heroSm:1,
+    s:`11am. One mile a round. The cutoff dropping ten seconds every time. Nowhere to hide.`});
+  C.push({scene:'dist',ghost:km.toFixed(0),k:'You covered',count:{to:km,dp:1,unit:'km'},s:distSub(me.miles,km)});
+  C.push({scene:'laps',ghostSvg:'oval',k:'Which is',count:{to:laps,dp:0,unit:'laps'},
+    s:`${me.miles} ${me.miles===1?'mile':'miles'} of the Kilmore oval. The same 800 metres of dirt, over and over, until it wasn't.`});
+  C.push({scene:'time',ghostSvg:'watch',k:'Time out there',hero:hms(feetSecs(me.miles)),heroMid:1,tnum:1,
+    s:`From the first siren to the one that finally got you. Hours of it, round after round.`});
+  C.push({scene:'clock',ember:1,ghostSvg:'chevdown',k:'The clock',hero:endP,heroMid:1,tnum:1,note:'min per km, your last mile',
+    s: me.miles>1
+      ? `It opened at <b>${startP}</b> a kilometre, barely a jog. By your last mile it demanded <b>${endP}</b>. You matched it, round after round.`
+      : `It opened at <b>${startP}</b> a kilometre and only ever got faster. You took on a clock most people wouldn't.`});
+  if(me.miles>avg){
+    const w=v=>Math.max(6,Math.round(v/Math.max(me.miles,avg)*100));
+    C.push({scene:'vs',k:'You vs the field',hero:`+${(me.miles-avg).toFixed(1)}`,heroSm:1,note:'miles over the average runner',
+      cmp:[{lab:'You',v:`${me.miles} mi`,w:w(me.miles),you:1},{lab:'The average runner',v:`${avg.toFixed(1)} mi`,w:w(avg)}],
+      s:`The average runner managed ${avg.toFixed(1)} miles. You did <b>${me.miles}</b>. Still out there when most of the field was done.`});
+  }else{
+    C.push({scene:'vs',k:'You vs the couch',hero:`${me.miles}`,heroSm:1,note:`${me.miles===1?'mile':'miles'} to the country's zero`,
+      cmp:[{lab:'You',v:`${me.miles} mi`,w:100,you:1},{lab:'The rest of the country',v:'0 mi',w:4}],
+      s:`The average Australian ran nothing today. You ran <b>${me.miles} ${me.miles===1?'mile':'miles'}</b> on a dropping clock. Have a think about that.`});
+  }
+  C.push(stand);
+  C.push({t:'persona',scene:'persona',ember: per.n==='The Machine'||per.n==='Last One Standing'?1:0,per});
+  // summary
+  C.push({t:'summary',scene:'sum',me,per,km,laps,podium,
+    time:hms(feetSecs(me.miles)),cut:mmss(cutoffAt(me.miles)),startP,endP,
+    tiles:[
+      {k:'Distance',v:`${me.miles} mi`,s:`${km.toFixed(1)} km · ${laps} laps`,big:`${me.miles}`,unit:'MI',sub2:distSub(me.miles,km)},
+      {k:'Time out there',v:hms(feetSecs(me.miles)),s:'start to last mile',big:hms(feetSecs(me.miles)),unit:'',sub2:'From the first siren to the one that finally got you.'},
+      {k:'Final pace',v:`${endP}/km`,s: me.miles>1?`from ${startP}/km`:'the opening cutoff',big:endP,unit:'/KM',sub2: me.miles>1?`The clock forced you from ${startP} down to ${endP} a kilometre.`:`${startP} a kilometre, and the clock only ever got faster from there.`},
+      {k:'Where you stood',v:stand.chip,s:stand.chipSub,big:stand.chip,unit:'',small: stand.chip.length>7,sub2:stand.s.replace(/<\/?b>/g,'')},
+    ]});
+  return C;
+}
+
+const OVAL=`<svg viewBox="0 0 400 240" fill="none"><ellipse cx="200" cy="120" rx="180" ry="96" stroke="currentColor" stroke-width="5"/><ellipse cx="200" cy="120" rx="150" ry="70" stroke="currentColor" stroke-width="3" opacity=".5"/></svg>`;
+const WATCH=`<svg viewBox="0 0 240 240" fill="none"><circle cx="120" cy="128" r="96" stroke="currentColor" stroke-width="6"/><rect x="104" y="14" width="32" height="20" rx="4" fill="currentColor"/><line x1="120" y1="128" x2="120" y2="64" stroke="currentColor" stroke-width="6" stroke-linecap="round"/><line x1="120" y1="128" x2="168" y2="150" stroke="currentColor" stroke-width="6" stroke-linecap="round"/></svg>`;
+const CHEV=`<svg viewBox="0 0 300 300" fill="none"><path d="M40 200 L150 90 L260 200" stroke="currentColor" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/><path d="M40 120 L150 10 L260 120" stroke="currentColor" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/></svg>`;
+const CHEVDOWN=`<svg viewBox="0 0 300 300" fill="none"><path d="M40 100 L150 210 L260 100" stroke="currentColor" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/><path d="M40 180 L150 290 L260 180" stroke="currentColor" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/></svg>`;
+const SLASH=`<svg viewBox="0 0 130 110" fill="none"><g stroke="currentColor" stroke-width="10" stroke-linecap="round"><path d="M12 96 L58 30"/><path d="M46 96 L92 30"/><path d="M80 96 L126 30"/></g></svg>`;
+const SWOOSH=`<svg viewBox="0 0 240 16" fill="none" preserveAspectRatio="none"><path d="M4 12 C64 4, 150 3, 236 7" stroke="currentColor" stroke-width="5" stroke-linecap="round"/></svg>`;
+function ghostSvg(k){return{oval:OVAL,watch:WATCH,chev:CHEV,chevdown:CHEVDOWN}[k]||'';}
+function fieldHTML(N,pos){let h='',cap=Math.min(N,300);
+  for(let i=1;i<=cap;i++){const cls=i===pos?'you':(i>pos?'beat':'');h+=`<div class="dot ${cls}"></div>`;}return h;}
+
+function render(c){
+  const el=document.createElement('div');
+  el.className='card'+(c.scene?` scene-${c.scene}`:'')+(c.t==='persona'?' persona':'')+(c.t==='summary'?' summary':'');
+  if(c.ember){el.style.setProperty('--a','var(--cta)');el.style.setProperty('--glowcol','#7a4a12');}
+  let inner=`<div class="glow"></div><div class="dots"></div>
+    <div class="slash tr">${SLASH}</div><div class="slash bl">${SLASH}</div>`;
+  if(c.ghostSvg) inner+=`<div class="ghost" style="top:auto;bottom:12%;right:-2%">${ghostSvg(c.ghostSvg)}</div>`;
+  else if(c.ghost!=null) inner+=`<div class="ghost tnum">${c.ghost}</div>`;
+
+  if(c.t==='cover'){
+    inner+=`<img class="lockup rise" src="assets/lm-logo.svg" alt="Harry's Longest Mile">
+      <div class="hero rise d1">Your day,<br><span class="punch">wrapped.</span></div>
+      <div class="swoosh rise d1">${SWOOSH}</div>
+      <div class="sub rise d2 tnum" style="font-size:15px;letter-spacing:.02em;color:var(--muted)">BIB ${pad(cur.bib)} · ${cur.name.toUpperCase()}</div>
+      <div class="sub rise d3">A track, a stopwatch, and a clock that wanted you gone. Here's how it went.</div>`;
+  } else if(c.t==='persona'){
+    inner+=`<div class="ghost" style="top:8%;left:-2%">${CHEV}</div>
+      <div class="kicker rise">Your Longest Mile type</div>
+      <div class="name rise d1">${c.per.n}</div>
+      <div class="sub rise d2">${c.per.l}</div>`;
+  } else if(c.t==='summary'){
+    const tiles=c.tiles.map((t,i)=>`<button class="ptile" data-share="stat" data-i="${i}">
+        <span class="shico">⤴</span>
+        <div class="k">${t.k}</div>
+        <div class="v${t.small?' tnum" style="font-size:19px"':' tnum"'}>${t.v.replace(' km','<small> km</small>').replace(' mi','<small> mi</small>').replace('/km','<small>/km</small>')}</div>
+        <div class="s">${t.s}</div></button>`).join('');
+    const place=c.podium?`<div class="pplace">🏁 ${ordinal(c.podium.place)} · ${c.podium.g}</div>`:'';
+    inner+=`<div class="poster rise">
+      <div class="phead"><b>${c.me.name}</b><span class="tnum">BIB ${pad(c.me.bib)}</span></div>
+      <img class="plock" src="assets/lm-logo.svg" alt="Harry's Longest Mile">
+      <div class="peyebrow">Your Longest Mile type · 8 Aug 2026</div>
+      <div class="pname">${c.per.n}</div>
+      ${place}
+      <div class="pgrid">${tiles}</div>
+      <div class="pshare">
+        <button class="sharebtn" data-share="summary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 15V3"/><path d="m8 7 4-4 4 4"/></svg>
+          Share your card
+        </button>
+        <div class="sharehint">or tap any stat to share just that one</div>
+        <div class="at">@harryslongestmile</div>
+      </div>
+    </div>`;
+  } else {
+    inner+=`<div class="kicker rise">${c.k}</div>`;
+    if(c.count!=null){
+      inner+=`<div class="hero rise d1 tnum" data-count="${c.count.to}" data-dp="${c.count.dp}">0<span class="u">${c.count.unit}</span></div>`;
+    }else if(c.hero){
+      inner+=`<div class="hero rise d1 ${c.heroSm?'sm':''}${c.heroMid?'mid':''}${c.tnum?' tnum':''}">${c.hero}</div>`;
+    }
+    if(c.note) inner+=`<div class="heronote rise d1">${c.note}</div>`;
+    if(c.cmp) inner+=`<div class="cmp rise d2">`+c.cmp.map(r=>
+        `<div class="cmprow"><div class="lab"><span>${r.lab}</span><b class="tnum">${r.v}</b></div>
+         <div class="track"><div class="fill ${r.you?'you':'them'}" style="--w:${r.w}%"></div></div></div>`).join('')+`</div>`;
+    if(c.field) inner+=`<div class="field rise d2">${fieldHTML(c.field.N,c.field.pos)}</div>`;
+    if(c.s) inner+=`<div class="sub rise ${c.cmp||c.field?'d3':'d2'}">${c.s}</div>`;
+  }
+  el.innerHTML=inner;
+  return el;
+}
+
+const SCENE_A={time:'var(--accent)'};
+
+function countUp(el){
+  const to=+el.dataset.count, dp=+el.dataset.dp, unit=el.querySelector('.u')?.outerHTML||'';
+  const dur=750,t0=performance.now();
+  if(matchMedia('(prefers-reduced-motion:reduce)').matches){el.innerHTML=to.toFixed(dp)+unit;return;}
+  function step(t){const p=Math.min(1,(t-t0)/dur),e=1-Math.pow(1-p,3);
+    el.innerHTML=(to*e).toFixed(dp)+unit;if(p<1)requestAnimationFrame(step);}
+  requestAnimationFrame(step);
+}
+function buildBars(n){const b=$('#bars');b.innerHTML='';
+  for(let i=0;i<n;i++){const d=document.createElement('div');d.className='bar';d.innerHTML='<span></span>';b.appendChild(d);}}
+// shrink any big heading until it can't overflow its box (belt-and-suspenders vs word-wrap)
+function fitText(el){el.style.fontSize='';let size=parseFloat(getComputedStyle(el).fontSize),g=80;
+  while(el.scrollWidth>el.clientWidth+1&&size>16&&g>0){g=g-1;size=size-1;el.style.fontSize=size+'px';}}
+function fitActive(){const el=els[idx];if(!el)return;el.querySelectorAll('.pname,.name').forEach(fitText);}
+function show(i){
+  idx=Math.max(0,Math.min(cards.length-1,i));
+  els.forEach((el,k)=>el.classList.toggle('show',k===idx));
+  document.querySelectorAll('#bars .bar').forEach((b,k)=>{b.classList.toggle('done',k<idx);b.classList.toggle('active',k===idx);});
+  const last=idx===cards.length-1;
+  $('#hint').style.opacity=last?'0':'.8';
+  document.querySelector('.nav').style.pointerEvents=last?'none':'auto';
+  if(!animated.has(idx)){animated.add(idx);els[idx].querySelectorAll('[data-count]').forEach(countUp);}
+  fitActive();
+}
+function next(){if(idx<cards.length-1)show(idx+1);}
+function prev(){if(idx>0)show(idx-1);}
+function getBib(){const q=new URLSearchParams(location.search).get('bib');if(q)return+q;
+  const p=location.pathname.replace(/\/+$/,'').split('/').pop();return(p&&/^\d+$/.test(p))?+p:null;}
+
+function showPicker(rows){
+  const N=rows.length,byPos=[...rows].sort((a,b)=>a.finish_position-b.finish_position);
+  const M=10,picks=[];const seen=new Set();
+  for(let k=0;k<M;k++){const p=byPos[Math.round(k*(N-1)/(M-1))];if(p&&!seen.has(p.bib)){seen.add(p.bib);picks.push(p);}}
+  const lab=p=>p.finish_position===1?'Champion':p.finish_position===N?'Last out':`${Math.max(1,Math.round(p.finish_position/N*100))}%`;
+  $('#picker').innerHTML=picks.map(p=>
+    `<a href="?bib=${p.bib}"><span class="nm">${p.name} <small>· bib ${p.bib}</small></span><span class="rt tnum">${p.miles} mi <small>${lab(p)}</small></span></a>`).join('');
+  $('#err').classList.add('show');
+  document.querySelector('.nav').style.pointerEvents='none';$('#hint').style.display='none';
+}
+
+/* ---------- shareable branded images (story size, Inter) ---------- */
+const SW=1080,SH=1920;
+const LOGO=new Image();LOGO.src=window.LM_LOGO||'assets/lm-logo.png';  // data URI → no canvas taint on file://
+if(LOGO.decode)LOGO.decode().catch(()=>{});                             // pre-warm so sharing needs no await
+function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.roundRect(x,y,w,h,r);}
+function shareDeco(ctx){
+  ctx.save();ctx.fillStyle='#5fe6c4';
+  for(let y=64;y<780;y+=30)for(let x=44;x<SW;x+=30){
+    const a=0.16*(1-(y-64)/720);if(a<=0)continue;ctx.globalAlpha=a;ctx.beginPath();ctx.arc(x,y,2.2,0,7);ctx.fill();}
+  ctx.globalAlpha=1;ctx.strokeStyle='rgba(95,230,196,.10)';ctx.lineWidth=14;ctx.lineCap='round';
+  for(let i=0;i<3;i++){ctx.beginPath();ctx.moveTo(48+i*72,SH-56);ctx.lineTo(128+i*72,SH-196);ctx.stroke();}
+  ctx.restore();}
+const F=(w,s)=>`${w} ${s}px Inter,-apple-system,"Segoe UI",Roboto,sans-serif`;
+function T(ctx,s,x,y,font,color,align,ls){ctx.font=font;ctx.fillStyle=color;ctx.textAlign=align||'left';
+  ctx.textBaseline='alphabetic';try{ctx.letterSpacing=(ls||0)+'px';}catch(e){}
+  ctx.fillText(s,x,y);try{ctx.letterSpacing='0px';}catch(e){}}
+function shareBg(ctx,ember){
+  let g=ctx.createLinearGradient(0,0,0,SH);
+  g.addColorStop(0,'#0a3a30');g.addColorStop(.55,'#001712');g.addColorStop(1,'#00100c');
+  ctx.fillStyle=g;ctx.fillRect(0,0,SW,SH);
+  let r=ctx.createRadialGradient(SW/2,SH*0.15,0,SW/2,SH*0.15,SW*1.05);
+  r.addColorStop(0,ember?'rgba(255,158,44,.26)':'rgba(95,230,196,.20)');r.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=r;ctx.fillRect(0,0,SW,SH);}
+function chev(ctx,cx,cy,w,col,op){ctx.save();ctx.globalAlpha=op;ctx.strokeStyle=col;ctx.lineWidth=w*0.09;
+  ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.beginPath();ctx.moveTo(cx-w/2,cy+w*0.28);ctx.lineTo(cx,cy-w*0.22);ctx.lineTo(cx+w/2,cy+w*0.28);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx-w/2,cy+w*0.02);ctx.lineTo(cx,cy-w*0.48);ctx.lineTo(cx+w/2,cy+w*0.02);ctx.globalAlpha=op*0.5;ctx.stroke();
+  ctx.restore();}
+function fit(ctx,s,maxw,weight,start){let sz=start;do{ctx.font=F(weight,sz);if(ctx.measureText(s).width<=maxw)break;sz-=4;}while(sz>26);return sz;}
+function wrapUpper(ctx,s,weight,size,maxw){ctx.font=F(weight,size);const words=s.toUpperCase().split(' '),lines=[];let cur='';
+  for(const w of words){const t=cur?cur+' '+w:w;if(ctx.measureText(t).width>maxw&&cur){lines.push(cur);cur=w;}else cur=t;}if(cur)lines.push(cur);return lines;}
+// the shareable IS the on-screen summary card, raised off the branded background —
+// roughly 4:5 and centred, so it reads well as a story (room above/below) and a post (no crop)
+const CARD={x:64,y:306,w:952,h:1300,r:40,pad:56};
+function cardFrame(ctx,emb){
+  const {x,y,w,h,r}=CARD;
+  const g=ctx.createLinearGradient(x,y,x+w*0.45,y+h);
+  g.addColorStop(0,'#083f34');g.addColorStop(.58,'#00241c');g.addColorStop(1,'#00130f');
+  ctx.save();rr(ctx,x,y,w,h,r);ctx.clip();
+  ctx.fillStyle=g;ctx.fillRect(x,y,w,h);
+  const rg=ctx.createRadialGradient(x+w*0.84,y+40,0,x+w*0.84,y+40,w*0.72);
+  rg.addColorStop(0,emb?'rgba(255,158,44,.32)':'rgba(95,230,196,.32)');rg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=rg;ctx.fillRect(x,y,w,h);ctx.restore();
+  ctx.strokeStyle='rgba(95,230,196,.30)';ctx.lineWidth=2;rr(ctx,x+1,y+1,w-2,h-2,r-1);ctx.stroke();
+}
+function cardHead(ctx,me){
+  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+  const lx=CARD.x+CARD.pad, rx=CARD.x+CARD.w-CARD.pad;
+  T(ctx,me.name.toUpperCase(),lx,388,F(800,44),'#ffffff','left',0);
+  T(ctx,"BIB "+pad(me.bib),rx,388,F(700,34),'#5fe6c4','right',1);
+  ctx.strokeStyle='rgba(95,230,196,.22)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(lx,416);ctx.lineTo(rx,416);ctx.stroke();
+  if(LOGO.complete&&LOGO.naturalWidth){const w=232,h=w*LOGO.naturalHeight/LOGO.naturalWidth;ctx.drawImage(LOGO,lx,446,w,h);}
+  return lx;}
+function handle(ctx){const cx=CARD.x+CARD.w/2;
+  T(ctx,"@harryslongestmile",cx,1512,F(800,50),'#5fe6c4','center',0);
+  T(ctx,"A TRACK. A STOPWATCH. ONE WINNER.",cx,1552,F(600,23),'rgba(255,255,255,.5)','center',3);}
+function pill(ctx,x,y,text){ctx.font=F(800,34);const w=ctx.measureText(text).width+72;const h=76;
+  ctx.fillStyle='#ff9e2c';rr(ctx,x,y,w,h,h/2);ctx.fill();
+  T(ctx,text,x+36,y+50,F(800,34),'#0a0a0a','left',1);return w;}
+
+function drawSummaryCanvas(sum){
+  const cv=document.createElement('canvas');cv.width=SW;cv.height=SH;const ctx=cv.getContext('2d');
+  const emb=ember(sum);
+  shareBg(ctx,emb);shareDeco(ctx);cardFrame(ctx,emb);
+  const lx=cardHead(ctx,sum.me);
+  T(ctx,"YOUR LONGEST MILE TYPE · 8 AUG 2026",lx,560,F(700,23),'rgba(255,255,255,.5)','left',3);
+  const lines=wrapUpper(ctx,sum.per.n,900,86,CARD.w-2*CARD.pad);const lh=90;
+  lines.forEach((l,idx)=>T(ctx,l,lx,636+idx*lh,F(900,86),emb?'#ff9e2c':'#5fe6c4','left',-2));
+  const py=636+(lines.length-1)*lh+52;
+  if(sum.podium)pill(ctx,lx,py,`🏁 ${ordinal(sum.podium.place)} · ${sum.podium.g.toUpperCase()}`);
+  const innerW=CARD.w-2*CARD.pad, gw=(innerW-24)/2, gh=196, gap=24, gy=900;
+  sum.tiles.forEach((t,i)=>{const col=i%2,row=Math.floor(i/2),x=lx+col*(gw+gap),ty=gy+row*(gh+gap);
+    ctx.fillStyle='rgba(0,0,0,.28)';rr(ctx,x,ty,gw,gh,22);ctx.fill();
+    ctx.strokeStyle='rgba(95,230,196,.15)';ctx.lineWidth=2;rr(ctx,x,ty,gw,gh,22);ctx.stroke();
+    T(ctx,t.k.toUpperCase(),x+28,ty+46,F(700,23),'rgba(255,255,255,.5)','left',3);
+    const vs=fit(ctx,t.v,gw-56,800,60);T(ctx,t.v,x+28,ty+124,F(800,vs),'#ffffff','left',0);
+    T(ctx,t.s,x+28,ty+170,F(500,23),'rgba(255,255,255,.5)','left',0);});
+  handle(ctx);return cv;}
+
+function drawStatCanvas(sum,i){
+  const t=sum.tiles[i];const cv=document.createElement('canvas');cv.width=SW;cv.height=SH;const ctx=cv.getContext('2d');
+  const emb=ember(sum);
+  shareBg(ctx,emb);shareDeco(ctx);cardFrame(ctx,emb);
+  // faint ghost value, clipped to the card
+  ctx.save();rr(ctx,CARD.x,CARD.y,CARD.w,CARD.h,CARD.r);ctx.clip();
+  T(ctx,t.big,CARD.x+CARD.w-30,1040,F(900,300),emb?'rgba(255,158,44,0.06)':'rgba(95,230,196,0.06)','right',-6);ctx.restore();
+  const lx=cardHead(ctx,sum.me);
+  const val=t.big+(t.unit?' '+t.unit.toLowerCase():'');
+  T(ctx,t.k.toUpperCase(),lx,600,F(700,38),'#5fe6c4','left',5);
+  const vs=fit(ctx,val,CARD.w-2*CARD.pad,900,150);
+  T(ctx,val,lx,600+vs*0.92,F(900,vs),'#ffffff','left',-3);
+  const cy=600+vs*0.92, maxw=CARD.w-2*CARD.pad;
+  const words=t.sub2.split(' ');let line='',ly=cy+70;ctx.font=F(500,36);
+  for(const w of words){const tt=line?line+' '+w:w;if(ctx.measureText(tt).width>maxw&&line){T(ctx,line,lx,ly,F(500,36),'rgba(255,255,255,.72)','left',0);line=w;ly+=50;}else line=tt;}
+  if(line)T(ctx,line,lx,ly,F(500,36),'rgba(255,255,255,.72)','left',0);
+  T(ctx,"YOUR LONGEST MILE TYPE",lx,1250,F(700,24),'rgba(255,255,255,.5)','left',4);
+  T(ctx,sum.per.n.toUpperCase(),lx,1312,F(900,46),emb?'#ff9e2c':'#5fe6c4','left',-1);
+  if(sum.podium)pill(ctx,lx,1352,`🏁 ${ordinal(sum.podium.place)} · ${sum.podium.g.toUpperCase()}`);
+  handle(ctx);return cv;}
+function ember(sum){return sum.per.n==='The Machine'||sum.per.n==='Last One Standing';}
+
+// call navigator.share inside the toBlob callback (single async hop) so the tap's
+// user-activation is preserved — that's what lets iOS offer "Save Image" (Photos)
+// instead of falling back to a download that lands in Files.
+function doShare(cv,fname){
+  cv.toBlob(async (blob)=>{
+    if(blob){
+      const file=new File([blob],fname,{type:'image/png'});
+      if(navigator.canShare&&navigator.canShare({files:[file]})){
+        try{await navigator.share({files:[file]});return;}
+        catch(e){if(e&&e.name==='AbortError')return;}   // user cancelled — don't also download
+      }
+      const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fname;document.body.appendChild(a);a.click();a.remove();return;
+    }
+    try{const u=cv.toDataURL('image/png');const w=window.open('');if(w)w.document.write('<img src="'+u+'" style="width:100%">');}catch(e){}
+  },'image/png');
+}
+function handleShare(kind,i){
+  const sum=cards.find(c=>c.t==='summary');if(!sum)return;   // fonts + logo are pre-warmed at load, so no awaits here (keeps the gesture alive)
+  if(kind==='summary')doShare(drawSummaryCanvas(sum),`longest-mile-${pad(sum.me.bib)}.png`);
+  else doShare(drawStatCanvas(sum,i),`longest-mile-${pad(sum.me.bib)}-${sum.tiles[i].k.toLowerCase().replace(/\s+/g,'-')}.png`);}
+
+function boot(){
+  let rows;
+  if(window.LM_RESULTS_CSV) rows=parseCSV(window.LM_RESULTS_CSV);
+  else{ $('#err').classList.add('show'); return; }
+  rowsAll=rows;
+  const bib=getBib();
+  cur=rows.find(r=>r.bib===bib);
+  if(!cur){ showPicker(rows); return; }
+  cards=buildCards(rows,cur);
+  els=cards.map(c=>{const el=render(c);
+    if(c.scene&&SCENE_A[c.scene]&&!c.ember) el.style.setProperty('--a',SCENE_A[c.scene]);
+    app.appendChild(el);return el;});
+  buildBars(cards.length);
+  show(0);
+  try{document.fonts.ready.then(fitActive);}catch(e){}
+}
+
+app.addEventListener('click',e=>{const b=e.target.closest('[data-share]');
+  if(b){e.stopPropagation();handleShare(b.dataset.share,+b.dataset.i||0);}});
+$('#next').addEventListener('click',next);
+$('#prev').addEventListener('click',prev);
+document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' ')next();if(e.key==='ArrowLeft')prev();});
+let tx=0;
+app.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+app.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx;if(dx<-40)next();else if(dx>40)prev();},{passive:true});
+
+boot();
+</script>
+</body>
+</html>
