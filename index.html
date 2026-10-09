@@ -140,7 +140,9 @@
   .pplace{display:inline-flex;align-items:center;gap:8px;margin-top:12px;
     background:var(--cta);color:#0a0a0a;font-weight:800;font-size:13px;letter-spacing:.02em;
     padding:7px 14px;border-radius:999px;box-shadow:0 0 26px rgba(255,158,44,.35)}
-  .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:18px}
+  /* 12px matches the eyebrow/name/pill rhythm above. The pill's 26px glow made the old
+     18px read as a hole between the archetype and the stats. */
+  .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-top:12px}
   .ptile{position:relative;text-align:left;background:rgba(0,0,0,.26);
     border:1px solid rgba(95,230,196,.14);border-radius:14px;padding:13px 14px;
     font:inherit;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent;
@@ -160,6 +162,14 @@
   .sharebtn:active{transform:translateY(1px)}
   .sharebtn svg{width:17px;height:17px}
   .sharehint{font-size:10.5px;letter-spacing:.09em;color:var(--muted);text-transform:uppercase}
+/* Story stickers: transparent PNGs the athlete drops over their own story. */
+.stickers{display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:16px;
+  padding-top:16px;border-top:1px solid rgba(255,255,255,.10);width:100%}
+.stickers-row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.stkbtn{font:inherit;font-weight:700;font-size:13px;color:#fff;background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:9px 15px;cursor:pointer}
+.stkbtn:hover{background:rgba(255,255,255,.13)}
+.stkbtn:disabled{opacity:.5}
   .pshare .at{font-weight:800;font-size:17px;color:var(--a);letter-spacing:-.01em;margin-top:1px}
 
   .hint{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 20px);left:0;right:0;
@@ -297,7 +307,7 @@ function buildCards(all,me){
 
   const C=[];
   C.push({t:'cover'});
-  C.push({scene:'start',ghost:'300',k:'How it started',hero:`300<br>on the<br>line`,heroSm:1,
+  C.push({scene:'start',ghost:`${N}`,k:'How it started',hero:`${N}<br>on the<br>line`,heroSm:1,
     s:`11am. One mile a round. The cutoff dropping ten seconds every time. Nowhere to hide.`});
   C.push({scene:'dist',ghost:km.toFixed(0),k:'You covered',count:{to:km,dp:1,unit:'km'},s:distSub(me.miles,km)});
   C.push({scene:'laps',ghostSvg:'oval',k:'Which is',count:{to:laps,dp:0,unit:'laps'},
@@ -383,6 +393,14 @@ function render(c){
         </button>
         <div class="sharehint">or tap any stat to share just that one</div>
         <div class="at">@harryslongestmile</div>
+        <div class="stickers">
+          <div class="sharehint">story stickers · drop them on your own photo</div>
+          <div class="stickers-row">
+            <button class="stkbtn" data-sticker="noplace-spread">Your stats</button>
+            <button class="stkbtn" data-sticker="noplace-stacked">Stacked</button>
+            <button class="stkbtn" data-sticker="map">The course</button>
+          </div>
+        </div>
       </div>
     </div>`;
   } else {
@@ -479,8 +497,8 @@ function wrapUpper(ctx,s,weight,size,maxw){ctx.font=F(weight,size);const words=s
 // the shareable IS the on-screen summary card, raised off the branded background —
 // roughly 4:5 and centred, so it reads well as a story (room above/below) and a post (no crop)
 const CARD={x:64,y:306,w:952,h:1300,r:40,pad:56};
-function cardFrame(ctx,emb){
-  const {x,y,w,h,r}=CARD;
+function cardFrame(ctx,emb,hOverride){
+  const {x,y,w,r}=CARD, h=hOverride||CARD.h;
   const g=ctx.createLinearGradient(x,y,x+w*0.45,y+h);
   g.addColorStop(0,'#083f34');g.addColorStop(.58,'#00241c');g.addColorStop(1,'#00130f');
   ctx.save();rr(ctx,x,y,w,h,r);ctx.clip();
@@ -498,9 +516,9 @@ function cardHead(ctx,me){
   ctx.strokeStyle='rgba(95,230,196,.22)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(lx,416);ctx.lineTo(rx,416);ctx.stroke();
   if(LOGO.complete&&LOGO.naturalWidth){const w=232,h=w*LOGO.naturalHeight/LOGO.naturalWidth;ctx.drawImage(LOGO,lx,446,w,h);}
   return lx;}
-function handle(ctx){const cx=CARD.x+CARD.w/2;
-  T(ctx,"@harryslongestmile",cx,1512,F(800,50),'#5fe6c4','center',0);
-  T(ctx,"A TRACK. A STOPWATCH. ONE WINNER.",cx,1552,F(600,23),'rgba(255,255,255,.5)','center',3);}
+function handle(ctx,hy,ty){const cx=CARD.x+CARD.w/2;
+  T(ctx,"@harryslongestmile",cx,hy||1512,F(800,50),'#5fe6c4','center',0);
+  T(ctx,"A TRACK. A STOPWATCH. ONE WINNER.",cx,ty||1552,F(600,23),'rgba(255,255,255,.5)','center',3);}
 function pill(ctx,x,y,text){ctx.font=F(800,34);const w=ctx.measureText(text).width+72;const h=76;
   ctx.fillStyle='#ff9e2c';rr(ctx,x,y,w,h,h/2);ctx.fill();
   T(ctx,text,x+36,y+50,F(800,34),'#0a0a0a','left',1);return w;}
@@ -508,21 +526,35 @@ function pill(ctx,x,y,text){ctx.font=F(800,34);const w=ctx.measureText(text).wid
 function drawSummaryCanvas(sum){
   const cv=document.createElement('canvas');cv.width=SW;cv.height=SH;const ctx=cv.getContext('2d');
   const emb=ember(sum);
-  shareBg(ctx,emb);shareDeco(ctx);cardFrame(ctx,emb);
+  shareBg(ctx,emb);shareDeco(ctx);
+
+  // Measure first, then draw. Content varies per athlete — the archetype wraps to one or two
+  // lines, and only top-10-in-gender get a podium pill — so a fixed-height card left a
+  // different sized hole for everyone. The card is sized to its content and re-centred instead.
+  const lines=wrapUpper(ctx,sum.per.n,900,86,CARD.w-2*CARD.pad);const lh=90;
+  const py=636+(lines.length-1)*lh+52;
+  const above = sum.podium ? py + 76 : 636 + (lines.length - 1) * lh + 24;
+  const innerW=CARD.w-2*CARD.pad, gw=(innerW-24)/2, gh=246, gap=24, gy=above + 60;
+  const tilesBottom = gy + 2*gh + gap;
+  const handleY = tilesBottom + 116, taglineY = handleY + 40;
+  const cardH = (taglineY + 54) - CARD.y;
+  const dy = Math.round((SH - cardH)/2 - CARD.y);   // keep the card centred in the 9:16 frame
+
+  ctx.save();ctx.translate(0,dy);
+  cardFrame(ctx,emb,cardH);
   const lx=cardHead(ctx,sum.me);
   T(ctx,"YOUR LONGEST MILE TYPE · 8 AUG 2026",lx,560,F(700,23),'rgba(255,255,255,.5)','left',3);
-  const lines=wrapUpper(ctx,sum.per.n,900,86,CARD.w-2*CARD.pad);const lh=90;
   lines.forEach((l,idx)=>T(ctx,l,lx,636+idx*lh,F(900,86),emb?'#ff9e2c':'#5fe6c4','left',-2));
-  const py=636+(lines.length-1)*lh+52;
   if(sum.podium)pill(ctx,lx,py,`🏁 ${ordinal(sum.podium.place)} · ${sum.podium.g.toUpperCase()}`);
-  const innerW=CARD.w-2*CARD.pad, gw=(innerW-24)/2, gh=196, gap=24, gy=900;
   sum.tiles.forEach((t,i)=>{const col=i%2,row=Math.floor(i/2),x=lx+col*(gw+gap),ty=gy+row*(gh+gap);
     ctx.fillStyle='rgba(0,0,0,.28)';rr(ctx,x,ty,gw,gh,22);ctx.fill();
     ctx.strokeStyle='rgba(95,230,196,.15)';ctx.lineWidth=2;rr(ctx,x,ty,gw,gh,22);ctx.stroke();
-    T(ctx,t.k.toUpperCase(),x+28,ty+46,F(700,23),'rgba(255,255,255,.5)','left',3);
-    const vs=fit(ctx,t.v,gw-56,800,60);T(ctx,t.v,x+28,ty+124,F(800,vs),'#ffffff','left',0);
-    T(ctx,t.s,x+28,ty+170,F(500,23),'rgba(255,255,255,.5)','left',0);});
-  handle(ctx);return cv;}
+    T(ctx,t.k.toUpperCase(),x+28,ty+52,F(700,23),'rgba(255,255,255,.5)','left',3);
+    const vs=fit(ctx,t.v,gw-56,800,66);T(ctx,t.v,x+28,ty+150,F(800,vs),'#ffffff','left',0);
+    T(ctx,t.s,x+28,ty+204,F(500,23),'rgba(255,255,255,.5)','left',0);});
+  handle(ctx,handleY,taglineY);
+  ctx.restore();
+  return cv;}
 
 function drawStatCanvas(sum,i){
   const t=sum.tiles[i];const cv=document.createElement('canvas');cv.width=SW;cv.height=SH;const ctx=cv.getContext('2d');
@@ -586,6 +618,27 @@ function boot(){
 
 app.addEventListener('click',e=>{const b=e.target.closest('[data-share]');
   if(b){e.stopPropagation();handleShare(b.dataset.share,+b.dataset.i||0);}});
+
+// Story stickers live in R2 next to the gallery's overlays. Fetched as a blob rather than
+// linked with `download`, because that attribute is ignored cross-origin and would just
+// open the PNG in a tab instead of saving it.
+const STICKER_BASE='https://pub-8be8df3bfbb7408b965084bb3fc8a1fe.r2.dev/longest-mile/stickers';
+app.addEventListener('click',async e=>{
+  const b=e.target.closest('[data-sticker]'); if(!b||!cur) return;
+  e.stopPropagation();
+  const label=b.textContent, variant=b.dataset.sticker;
+  b.disabled=true; b.textContent='Saving…';
+  try{
+    const r=await fetch(`${STICKER_BASE}/${variant}/${cur.bib}.png`);
+    if(!r.ok) throw new Error(r.status);
+    const u=URL.createObjectURL(await r.blob());
+    const a=document.createElement('a');
+    a.href=u; a.download=`longest-mile-${cur.bib}-${variant}.png`; a.click();
+    URL.revokeObjectURL(u);
+    b.textContent=label;
+  }catch(err){ console.error(err); b.textContent='Try again'; setTimeout(()=>{b.textContent=label;},1800); }
+  b.disabled=false;
+});
 $('#next').addEventListener('click',next);
 $('#prev').addEventListener('click',prev);
 document.addEventListener('keydown',e=>{if(e.key==='ArrowRight'||e.key===' ')next();if(e.key==='ArrowLeft')prev();});
